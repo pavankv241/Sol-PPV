@@ -1,0 +1,95 @@
+{
+  "version": "0.1.0",
+  "name": "pay_per_view",
+  "instructions": [
+    {
+      "name": "uploadVideo",
+      "accounts": [
+        { "name": "video", "isMut": true, "isSigner": false },
+        { "name": "uploader", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "videoHash", "type": "string" },
+        { "name": "thumbnailHash", "type": "string" },
+        { "name": "price", "type": "u64" },
+        { "name": "displayTime", "type": "u64" }
+      ]
+    },
+    {
+      "name": "payToView",
+      "accounts": [
+        { "name": "viewUnlock", "isMut": true, "isSigner": false },
+        { "name": "video", "isMut": false, "isSigner": false },
+        { "name": "viewer", "isMut": true, "isSigner": true },
+        { "name": "uploader", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "videoId", "type": "publicKey" }
+      ]
+    },
+    {
+      "name": "canView",
+      "accounts": [
+        { "name": "video", "isMut": false, "isSigner": false },
+        { "name": "viewUnlock", "isMut": false, "isSigner": false },
+        { "name": "viewer", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "videoId", "type": "publicKey" }
+      ],
+      "returns": "bool"
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Video",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "uploader", "type": "publicKey" },
+          { "name": "videoHash", "type": "string" },
+          { "name": "thumbnailHash", "type": "string" },
+          { "name": "price", "type": "u64" },
+          { "name": "displayTime", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "ViewUnlock",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "viewer", "type": "publicKey" },
+          { "name": "videoId", "type": "publicKey" },
+          { "name": "unlockTime", "type": "u64" }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "VideoUploaded",
+      "fields": [
+        { "name": "videoId", "type": "publicKey", "index": false },
+        { "name": "uploader", "type": "publicKey", "index": false },
+        { "name": "videoHash", "type": "string", "index": false },
+        { "name": "thumbnailHash", "type": "string", "index": false },
+        { "name": "price", "type": "u64", "index": false },
+        { "name": "displayTime", "type": "u64", "index": false }
+      ]
+    },
+    {
+      "name": "PaidToView",
+      "fields": [
+        { "name": "videoId", "type": "publicKey", "index": false },
+        { "name": "viewer", "type": "publicKey", "index": false },
+        { "name": "unlockTime", "type": "u64", "index": false }
+      ]
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "InsufficientPayment", "msg": "Insufficient payment" }
+  ]
+} 
