@@ -77,6 +77,7 @@ const UploadPage = () => {
         setLoading(false);
         return;
       }
+      //Commented out for now
       // Store video metadata in localStorage
       const newVideo = {
         videoHash,
