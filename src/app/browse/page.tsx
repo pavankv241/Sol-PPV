@@ -96,7 +96,11 @@ const BrowsePage = () => {
       await connection.confirmTransaction({ signature: txid, blockhash, lastValidBlockHeight }, 'confirmed');
       setPaidForVideo(video.videoHash, true);
     } catch (err) {
-      setPayError(err.message || 'Payment failed');
+      if (err instanceof Error) {
+        setPayError(err.message || 'Payment failed');
+      } else {
+        setPayError('Payment failed');
+      }
       return;
     } finally {
       setPaying(false);
