@@ -44,7 +44,7 @@ const BrowsePage = () => {
   }, [publicKey, showModal]);
 
   // Helper to set paid status for current wallet
-  const setPaidForVideo = (videoHash, value) => {
+  const setPaidForVideo = (videoHash: string, value: boolean) => {
     if (!publicKey) return;
     let paid = {};
     if (typeof window !== 'undefined') {
