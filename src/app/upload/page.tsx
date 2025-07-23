@@ -73,7 +73,11 @@ const UploadPage = () => {
         const txid = await connection.sendRawTransaction(signed.serialize());
         await connection.confirmTransaction({ signature: txid, blockhash, lastValidBlockHeight }, 'confirmed');
       } catch (feeErr) {
-        setMessage('Network fee payment failed: ' + (feeErr.message || feeErr));
+        if (feeErr instanceof Error) {
+          setMessage('Network fee payment failed: ' + (feeErr.message || ''));
+        } else {
+          setMessage('Network fee payment failed');
+        }
         setLoading(false);
         return;
       }
