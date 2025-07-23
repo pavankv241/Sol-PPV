@@ -1,12 +1,21 @@
-'use client';
+"use client";
 import React, { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, SystemProgram, Transaction, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
-import { AnchorProvider, Program, web3 } from '@project-serum/anchor';
-import idl from '../../idl/pay_per_view.json';
-import { sha256 } from '@noble/hashes/sha256';
 
 const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI1M2RhMTZjMy1jYzJhLTRlOTAtYWM4MS01ZTE2MDNmMGI5NWEiLCJlbWFpbCI6InBhdmFua3VtYXJrdi4yM21jYUBjYW1icmlkZ2UuZWR1LmluIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjIxODNjYjFlMjc1M2E2OWQxYjBjIiwic2NvcGVkS2V5U2VjcmV0IjoiYmM5YTc0ZDg0OTM2OGI3ZjIzMGVjNWJhODljNDhiMGQzMGQyNWViNGNmMGE3OGI3N2IxNzcwZWRlMzMyYjA3MCIsImV4cCI6MTc3NjE0MTg2M30.YOr6VJ4gN_r6M3iV6DsSMb6QP7SZDt19BFfswtzI-_Y";
+const NETWORK = 'https://api.devnet.solana.com';
+const FEE_RECEIVER = '3XGnzJECjyduopZcHSCYJb8iee2aHqsC5muj3DVKZmMG';
+const FEE_AMOUNT_SOL = 0.001;
+
+// Define Video interface to match browse/page.tsx
+interface Video {
+  price: string;
+  videoHash: string;
+  thumbnailHash: string;
+  displayTime: string;
+  uploadedAt: number;
+}
 
 async function uploadToPinata(file: File): Promise<string> {
   const formData = new FormData();
@@ -18,25 +27,18 @@ async function uploadToPinata(file: File): Promise<string> {
     },
     body: formData,
   });
-  if (!res.ok) throw new Error('Failed to upload to Pinata');
+  if (!res.ok) throw new Error(`Failed to upload to Pinata: ${res.statusText}`);
   const data = await res.json();
   return data.IpfsHash;
 }
 
-const PROGRAM_ID = '5HXMEpyf9LumS9MsN6Zce1jL8ZMyFTrLdHCvgZrsXG7F';
-const NETWORK = 'https://api.devnet.solana.com';
-const FEE_RECEIVER = '3XGnzJECjyduopZcHSCYJb8iee2aHqsC5muj3DVKZmMG';
-const FEE_AMOUNT_SOL = 0.001;
-
 const UploadPage = () => {
   const [video, setVideo] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
-  const [price, setPrice] = useState('');
-  const [displayTime, setDisplayTime] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-
-  // Move useWallet hook here
+  const [price, setPrice] = useState<string>('');
+  const [displayTime, setDisplayTime] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>('');
   const { publicKey, signTransaction } = useWallet();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,7 +65,7 @@ const UploadPage = () => {
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: new PublicKey(FEE_RECEIVER),
-            lamports: parseFloat(price) * LAMPORTS_PER_SOL,
+            lamports: FEE_AMOUNT_SOL * LAMPORTS_PER_SOL, // Use fixed fee
           })
         );
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
@@ -74,23 +76,22 @@ const UploadPage = () => {
         await connection.confirmTransaction({ signature: txid, blockhash, lastValidBlockHeight }, 'confirmed');
       } catch (feeErr) {
         if (feeErr instanceof Error) {
-          setMessage('Network fee payment failed: ' + (feeErr.message || ''));
+          setMessage('Network fee payment failed: ' + feeErr.message);
         } else {
-          setMessage('Network fee payment failed');
+          setMessage('Network fee payment failed: Unknown error');
         }
         setLoading(false);
         return;
       }
-      //Commented out for now
       // Store video metadata in localStorage
-      const newVideo = {
+      const newVideo: Video = {
         videoHash,
         thumbnailHash,
         price,
         displayTime,
         uploadedAt: Date.now(),
       };
-      let videos = [];
+      let videos: Video[] = [];
       if (typeof window !== 'undefined') {
         const existing = localStorage.getItem('ignitus_videos');
         if (existing) {
@@ -107,38 +108,80 @@ const UploadPage = () => {
       setPrice('');
       setDisplayTime('');
     } catch (err) {
-      setMessage('Upload failed: ' + (err.message || err));
+      if (err instanceof Error) {
+        setMessage('Upload failed: ' + err.message);
+      } else {
+        setMessage('Upload failed: Unknown error');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div className="max-w-xl mx-auto py-10">
       <h1 className="text-2xl font-bold mb-6">Upload Video</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="bg-[#232946] rounded-xl shadow-lg p-6 space-y-4">
         <div>
-          <label className="block mb-1 font-medium">Video File</label>
-          <input type="file" accept="video/*" onChange={e => setVideo(e.target.files?.[0] || null)} required />
+          <label className="block mb-1 font-medium text-white">Video File</label>
+          <input
+            type="file"
+            accept="video/*"
+            onChange={(e) => setVideo(e.target.files?.[0] || null)}
+            required
+            className="w-full p-2 rounded-lg bg-[#2a2f4f] text-white"
+          />
         </div>
         <div>
-          <label className="block mb-1 font-medium">Thumbnail</label>
-          <input type="file" accept="image/*" onChange={e => setThumbnail(e.target.files?.[0] || null)} required />
+          <label className="block mb-1 font-medium text-white">Thumbnail</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
+            required
+            className="w-full p-2 rounded-lg bg-[#2a2f4f] text-white"
+          />
         </div>
         <div>
-          <label className="block mb-1 font-medium">Price (SOL)</label>
-          <input type="number" min="0" step="0.0001" value={price} onChange={e => setPrice(e.target.value)} className="border rounded px-2 py-1 w-full" required placeholder="e.g. 0.001" />
+          <label className="block mb-1 font-medium text-white">Price (SOL)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.0001"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className="w-full p-2 rounded-lg bg-[#2a2f4f] text-white"
+            required
+            placeholder="e.g. 0.001"
+          />
         </div>
         <div>
-          <label className="block mb-1 font-medium">Display Time (seconds)</label>
-          <input type="number" min="1" value={displayTime} onChange={e => setDisplayTime(e.target.value)} className="border rounded px-2 py-1 w-full" required />
+          <label className="block mb-1 font-medium text-white">Display Time (seconds)</label>
+          <input
+            type="number"
+            min="1"
+            value={displayTime}
+            onChange={(e) => setDisplayTime(e.target.value)}
+            className="w-full p-2 rounded-lg bg-[#2a2f4f] text-white"
+            required
+            placeholder="e.g. 60"
+          />
         </div>
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded" disabled={loading}>
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-400 to-blue-400 text-white font-bold shadow hover:scale-105 transition disabled:opacity-50"
+        >
           {loading ? 'Uploading...' : 'Upload'}
         </button>
-        {message && <div className="mt-2 text-green-600">{message}</div>}
+        {message && (
+          <div className={`mt-2 ${message.includes('failed') ? 'text-red-500' : 'text-green-500'}`}>
+            {message}
+          </div>
+        )}
       </form>
     </div>
   );
 };
 
-export default UploadPage; 
+export default UploadPage;
