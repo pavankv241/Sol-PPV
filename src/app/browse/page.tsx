@@ -46,7 +46,7 @@ const BrowsePage = () => {
   // Helper to set paid status for current wallet
   const setPaidForVideo = (videoHash: string, value: boolean) => {
     if (!publicKey) return;
-    let paid = {};
+    let paid: Record<string, Record<string, boolean>> = {};
     if (typeof window !== 'undefined') {
       const paidStr = localStorage.getItem('ignitus_paid');
       if (paidStr) {
