@@ -6,15 +6,23 @@ import { Connection, SystemProgram, Transaction, LAMPORTS_PER_SOL, PublicKey } f
 const NETWORK = 'https://api.devnet.solana.com';
 const FEE_RECEIVER = '3XGnzJECjyduopZcHSCYJb8iee2aHqsC5muj3DVKZmMG';
 
+interface Video {
+  price: string;
+  videoHash: string;
+  thumbnailHash: string;
+  displayTime: string;
+  title?: string;
+}
+
 const BrowsePage = () => {
-  const [videos, setVideos] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [selected, setSelected] = useState<Video | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState('');
-  const [paidVideos, setPaidVideos] = useState({});
+  const [paidVideos, setPaidVideos] = useState<Record<string, boolean>>({});
   const { publicKey, signTransaction, connected } = useWallet();
-  const videoRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Load videos from localStorage
   useEffect(() => {
@@ -67,7 +75,7 @@ const BrowsePage = () => {
   };
 
   // Handle payment
-  const handlePay = async (video) => {
+  const handlePay = async (video: Video) => {
     setPaying(true);
     setPayError('');
     try {
@@ -96,7 +104,7 @@ const BrowsePage = () => {
   };
 
   // Handle opening modal
-  const handleView = (video) => {
+  const handleView = (video: Video) => {
     setSelected(video);
     setShowModal(true);
   };
@@ -185,4 +193,4 @@ const BrowsePage = () => {
   );
 };
 
-export default BrowsePage; 
+export default BrowsePage;
